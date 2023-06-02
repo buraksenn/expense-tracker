@@ -6,13 +6,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
 	"google.golang.org/api/drive/v3"
 )
 
 type Client interface {
 	Upload(userID string, content []byte) error
-	GetFileLinksByUserID(userID string) ([]string, error)
+	GetFileLinksByUserID(userID string, from time.Time) ([]string, error)
 }
 
 type DefaultClient struct {
@@ -29,7 +28,7 @@ func NewClient(ctx context.Context) (*DefaultClient, error) {
 
 func (c *DefaultClient) Upload(userID string, content []byte) error {
 	date := time.Now()
-	fileID := fmt.Sprintf("%d-%d-%s", date.Month(), date.Day(), uuid.NewString())
+	fileID := fmt.Sprintf("%s_%s", userID, date.Format("2006_01_02T15_04_05Z07_00"))
 	_, err := c.svc.Files.Create(&drive.File{
 		Name: fileID,
 		Permissions: []*drive.Permission{
@@ -41,9 +40,9 @@ func (c *DefaultClient) Upload(userID string, content []byte) error {
 	return err
 }
 
-func (c *DefaultClient) GetFileLinksByUserID(userID string) ([]string, error) {
-	// get files by filtering with userID
-	l, err := c.svc.Files.List().Q(fmt.Sprintf("name contains '%s'", userID)).Do()
+func (c *DefaultClient) GetFileLinksByUserID(userID string, from time.Time) ([]string, error) {
+	l, err := c.svc.Files.List().Q(fmt.Sprintf("name contains '%s' and createdTime > '%s'", userID, from.Format(time.RFC3339))).Do()
+
 	if err != nil {
 		return nil, err
 	}
