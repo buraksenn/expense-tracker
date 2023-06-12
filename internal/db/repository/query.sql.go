@@ -7,10 +7,131 @@ package repository
 
 import (
 	"context"
+	"time"
 )
 
+const createExpense = `-- name: CreateExpense :one
+INSERT INTO expenses (user_id, type, description, price, tax_percentage)
+VALUES ($1, $2, $3, $4, $5) RETURNING id, user_id, description, type, price, tax_percentage, installment, installment_end_date, created_at
+`
+
+type CreateExpenseParams struct {
+	UserID        int32   `db:"user_id" json:"userID"`
+	Type          string  `db:"type" json:"type"`
+	Description   string  `db:"description" json:"description"`
+	Price         float32 `db:"price" json:"price"`
+	TaxPercentage int32   `db:"tax_percentage" json:"taxPercentage"`
+}
+
+func (q *Queries) CreateExpense(ctx context.Context, arg *CreateExpenseParams) (*Expense, error) {
+	row := q.db.QueryRowContext(ctx, createExpense,
+		arg.UserID,
+		arg.Type,
+		arg.Description,
+		arg.Price,
+		arg.TaxPercentage,
+	)
+	var i Expense
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Description,
+		&i.Type,
+		&i.Price,
+		&i.TaxPercentage,
+		&i.Installment,
+		&i.InstallmentEndDate,
+		&i.CreatedAt,
+	)
+	return &i, err
+}
+
+const getExpenses = `-- name: GetExpenses :many
+SELECT id, user_id, description, type, price, tax_percentage, installment, installment_end_date, created_at FROM expenses
+WHERE user_id = $1 AND created_at >= $2 AND created_at <= $3
+`
+
+type GetExpensesParams struct {
+	UserID      int32     `db:"user_id" json:"userID"`
+	CreatedAt   time.Time `db:"created_at" json:"createdAt"`
+	CreatedAt_2 time.Time `db:"created_at_2" json:"createdAt2"`
+}
+
+func (q *Queries) GetExpenses(ctx context.Context, arg *GetExpensesParams) ([]*Expense, error) {
+	rows, err := q.db.QueryContext(ctx, getExpenses, arg.UserID, arg.CreatedAt, arg.CreatedAt_2)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []*Expense
+	for rows.Next() {
+		var i Expense
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.Description,
+			&i.Type,
+			&i.Price,
+			&i.TaxPercentage,
+			&i.Installment,
+			&i.InstallmentEndDate,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, &i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getExpensesSummary = `-- name: GetExpensesSummary :many
+SELECT type, SUM(price) FROM expenses
+WHERE user_id = $1 AND created_at >= $2 AND created_at <= $3
+GROUP BY type
+`
+
+type GetExpensesSummaryParams struct {
+	UserID      int32     `db:"user_id" json:"userID"`
+	CreatedAt   time.Time `db:"created_at" json:"createdAt"`
+	CreatedAt_2 time.Time `db:"created_at_2" json:"createdAt2"`
+}
+
+type GetExpensesSummaryRow struct {
+	Type string `db:"type" json:"type"`
+	Sum  int64  `db:"sum" json:"sum"`
+}
+
+func (q *Queries) GetExpensesSummary(ctx context.Context, arg *GetExpensesSummaryParams) ([]*GetExpensesSummaryRow, error) {
+	rows, err := q.db.QueryContext(ctx, getExpensesSummary, arg.UserID, arg.CreatedAt, arg.CreatedAt_2)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []*GetExpensesSummaryRow
+	for rows.Next() {
+		var i GetExpensesSummaryRow
+		if err := rows.Scan(&i.Type, &i.Sum); err != nil {
+			return nil, err
+		}
+		items = append(items, &i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getUser = `-- name: GetUser :one
-SELECT id, email, chat_id, spreadsheet_id, created_at FROM users
+SELECT id, telegram_id, spreadsheet_id, created_at FROM users
 WHERE id = $1 LIMIT 1
 `
 
@@ -19,8 +140,7 @@ func (q *Queries) GetUser(ctx context.Context, id int32) (*User, error) {
 	var i User
 	err := row.Scan(
 		&i.ID,
-		&i.Email,
-		&i.ChatID,
+		&i.TelegramID,
 		&i.SpreadsheetID,
 		&i.CreatedAt,
 	)

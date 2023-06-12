@@ -1,6 +1,9 @@
 package expense
 
-import "strings"
+import (
+	"strings"
+	"time"
+)
 
 type ExpenseType string
 
@@ -10,7 +13,7 @@ const (
 	Fuel       ExpenseType = "Fuel"
 	Tech       ExpenseType = "Tech"
 	House      ExpenseType = "House"
-	HealthCare ExpenseType = "HealthCare"
+	HealthCare ExpenseType = "Healthcare"
 	Other      ExpenseType = "Other"
 )
 
@@ -33,10 +36,14 @@ func GetType(s string) ExpenseType {
 	}
 }
 
-type Command struct {
-	ExpenseType   ExpenseType
+type GetExpensesCommand struct {
+	StartDate time.Time
+}
+
+type RegisterExpenseCommand struct {
+	ExpenseType   string
 	Price         float32
-	TaxPercentage int
-	Installment   int
+	TaxPercentage int32
+	Installment   int32
 	Description   string
 }

@@ -12,10 +12,10 @@ import (
 type Expense struct {
 	ID                 int32         `db:"id" json:"id"`
 	UserID             int32         `db:"user_id" json:"userID"`
-	Name               string        `db:"name" json:"name"`
+	Description        string        `db:"description" json:"description"`
 	Type               string        `db:"type" json:"type"`
 	Price              float32       `db:"price" json:"price"`
-	TaxPercentage      float32       `db:"tax_percentage" json:"taxPercentage"`
+	TaxPercentage      int32         `db:"tax_percentage" json:"taxPercentage"`
 	Installment        sql.NullInt32 `db:"installment" json:"installment"`
 	InstallmentEndDate sql.NullTime  `db:"installment_end_date" json:"installmentEndDate"`
 	CreatedAt          time.Time     `db:"created_at" json:"createdAt"`
@@ -23,8 +23,7 @@ type Expense struct {
 
 type User struct {
 	ID            int32          `db:"id" json:"id"`
-	Email         string         `db:"email" json:"email"`
-	ChatID        string         `db:"chat_id" json:"chatID"`
+	TelegramID    string         `db:"telegram_id" json:"telegramID"`
 	SpreadsheetID sql.NullString `db:"spreadsheet_id" json:"spreadsheetID"`
 	CreatedAt     time.Time      `db:"created_at" json:"createdAt"`
 }

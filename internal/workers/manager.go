@@ -1,24 +1,27 @@
 package workers
 
+import "github.com/buraksenn/expense-tracker/internal/common"
+
 type Manager struct {
+	MessageChan common.IncomingMessageChan
 }
 
-// func GetCommandType(input string) (CommandType, error) {
-// 	words := strings.Split(input, " ")
-// 	switch len(words) {
-// 	case ImageCommandLength:
-// 		fallthrough
-// 	case ExpenseCommandLength:
-// 		log.Debug("Command length is valid for input: %s", input)
-// 	default:
-// 		return "", fmt.Errorf("invalid command")
-// 	}
+func New(MessageChan common.IncomingMessageChan) *Manager {
+	return &Manager{
+		MessageChan: MessageChan,
+	}
+}
 
-// 	switch strings.ToLower(input) {
-// 	case "image", "i":
-// 		return Image, nil
-// 	case "expense", "e":
-// 		return Expense, nil
-// 	}
-// 	return "", fmt.Errorf("invalid command")
-// }
+func (m *Manager) Run() {
+
+	message := <-m.MessageChan
+	if message.Photo != "" {
+		// TODO: register receipt, pass it to worker
+	}
+
+	command := GetCommandType(message.Text)
+	if command == "" {
+		// TODO: send error message
+	}
+
+}

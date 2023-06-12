@@ -1,24 +1,21 @@
 package bot
 
 import (
-	"github.com/buraksenn/expense-tracker/pkg/drive"
+	"github.com/buraksenn/expense-tracker/internal/common"
 	"github.com/buraksenn/expense-tracker/pkg/logger"
 	"github.com/buraksenn/expense-tracker/pkg/telegram"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-type Config struct {
-}
-
 type Bot struct {
 	TelegramClient telegram.Client
-	Drive          drive.Client
+	MessageChan    common.IncomingMessageChan
 }
 
-func New(t telegram.Client, d drive.Client) *Bot {
+func New(t telegram.Client, messageChan common.IncomingMessageChan) *Bot {
 	return &Bot{
 		TelegramClient: t,
-		Drive:          d,
+		MessageChan:    messageChan,
 	}
 }
 
@@ -36,5 +33,15 @@ func (b *Bot) Start() {
 }
 
 func (b *Bot) handleUpdate(update *tgbotapi.Update) {
+	msg := &common.IncomingMessage{
+		ChatID: update.Message.Chat.ID,
+		Text:   update.Message.Text,
+		User:   update.Message.From.ID,
+	}
 
+	if len(update.Message.Photo) > 0 {
+		msg.Photo = update.Message.Photo[0].FileID
+	}
+
+	b.MessageChan <- msg
 }
