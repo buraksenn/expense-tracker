@@ -7,20 +7,23 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"time"
 )
 
 const createExpense = `-- name: CreateExpense :one
-INSERT INTO expenses (user_id, type, description, price, tax_percentage)
-VALUES ($1, $2, $3, $4, $5) RETURNING id, user_id, description, type, price, tax_percentage, installment, installment_end_date, created_at
+INSERT INTO expenses (user_id, type, description, price, tax_percentage, installment,installment_end_date)
+VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, user_id, description, type, price, tax_percentage, installment, installment_end_date, created_at
 `
 
 type CreateExpenseParams struct {
-	UserID        int32   `db:"user_id" json:"userID"`
-	Type          string  `db:"type" json:"type"`
-	Description   string  `db:"description" json:"description"`
-	Price         float32 `db:"price" json:"price"`
-	TaxPercentage int32   `db:"tax_percentage" json:"taxPercentage"`
+	UserID             int32         `db:"user_id" json:"userID"`
+	Type               string        `db:"type" json:"type"`
+	Description        string        `db:"description" json:"description"`
+	Price              float32       `db:"price" json:"price"`
+	TaxPercentage      int32         `db:"tax_percentage" json:"taxPercentage"`
+	Installment        sql.NullInt32 `db:"installment" json:"installment"`
+	InstallmentEndDate sql.NullTime  `db:"installment_end_date" json:"installmentEndDate"`
 }
 
 func (q *Queries) CreateExpense(ctx context.Context, arg *CreateExpenseParams) (*Expense, error) {
@@ -30,6 +33,8 @@ func (q *Queries) CreateExpense(ctx context.Context, arg *CreateExpenseParams) (
 		arg.Description,
 		arg.Price,
 		arg.TaxPercentage,
+		arg.Installment,
+		arg.InstallmentEndDate,
 	)
 	var i Expense
 	err := row.Scan(

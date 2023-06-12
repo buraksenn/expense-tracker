@@ -12,5 +12,5 @@ WHERE user_id = $1 AND created_at >= $2 AND created_at <= $3
 GROUP BY type;
 
 -- name: CreateExpense :one
-INSERT INTO expenses (user_id, type, description, price, tax_percentage)
-VALUES ($1, $2, $3, $4, $5) RETURNING *;
+INSERT INTO expenses (user_id, type, description, price, tax_percentage, installment,installment_end_date)
+VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *;

@@ -1,5 +1,11 @@
 package receipt
 
-type Command struct {
-	FileID string
+import "time"
+
+type UploadReceiptCommand struct {
+	Link string
+}
+
+type GetReceiptsCommand struct {
+	StartTime time.Time
 }

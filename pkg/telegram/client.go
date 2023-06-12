@@ -1,6 +1,8 @@
 package telegram
 
 import (
+	"fmt"
+
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
@@ -9,6 +11,7 @@ type Client interface {
 	SendMessage(chatID int64, text string) error
 	SendReplyMessage(chatID int64, text string, repliedMessageID int) error
 	SendImage(chatID int64, url string) error
+	GetFileLink(fileID string) (string, error)
 }
 
 type DefaultClient struct {
@@ -40,6 +43,16 @@ func (cl *DefaultClient) sendMessageInternal(chatID int64, text string, repliedM
 	msg.ReplyToMessageID = repliedMessageID
 	_, err := cl.bot.Send(msg)
 	return err
+}
+
+func (cl *DefaultClient) GetFileLink(fileID string) (string, error) {
+	fileConfig := tgbotapi.FileConfig{FileID: fileID}
+	file, err := cl.bot.GetFile(fileConfig)
+	if err != nil {
+		return "", fmt.Errorf("getting file: %w", err)
+	}
+
+	return file.Link(cl.bot.Token), nil
 }
 
 func (cl *DefaultClient) SendImage(chatID int64, url string) error {
