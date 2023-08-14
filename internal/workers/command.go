@@ -8,7 +8,6 @@ const (
 	GetExpenses     CommandType = "GetExpenses"
 	GetImages       CommandType = "GetImages"
 	RegisterExpense CommandType = "RegisterExpense"
-	RegisterImage   CommandType = "RegisterImage"
 )
 
 func GetCommandType(s string) CommandType {
