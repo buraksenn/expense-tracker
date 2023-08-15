@@ -17,6 +17,11 @@ var (
 	TableName = aws.String("expenses")
 )
 
+type Repo interface {
+	Put(ctx context.Context, expense *common.Expense) error
+	GetAllByID(ctx context.Context, chatID string) ([]*common.Expense, error)
+}
+
 type DefaultRepo struct {
 	c dynamo.Client
 }

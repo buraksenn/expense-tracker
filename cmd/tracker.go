@@ -13,6 +13,7 @@ import (
 	"github.com/buraksenn/expense-tracker/internal/worker"
 	"github.com/buraksenn/expense-tracker/pkg/aws/dynamo"
 	"github.com/buraksenn/expense-tracker/pkg/aws/s3"
+	"github.com/buraksenn/expense-tracker/pkg/aws/textract"
 	"github.com/buraksenn/expense-tracker/pkg/logger"
 	"github.com/buraksenn/expense-tracker/pkg/telegram"
 )
@@ -56,7 +57,12 @@ func main() {
 	if err != nil {
 		logger.Fatal("Failed to create s3 client, err: %v", err)
 	}
-	worker := worker.New(repo, s3Client, messageChan)
+	textractClient, err := textract.NewDefaultClient(ctx)
+	if err != nil {
+		logger.Fatal("Failed to create textract client, err: %v", err)
+	}
+
+	worker := worker.New(repo, s3Client, textractClient, messageChan)
 	go telegramBot.Start()
 	go worker.Start()
 

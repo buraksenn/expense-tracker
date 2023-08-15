@@ -14,12 +14,16 @@ const (
 	DefaultBucket = "expensetracker-receipts"
 )
 
-type Client struct {
+type Client interface {
+	Upload(ctx context.Context, key string, body io.Reader) error
+}
+
+type DefaultClient struct {
 	svc *s3.Client
 }
 
-func NewClient(ctx context.Context) (*Client, error) {
-	c := &Client{}
+func NewClient(ctx context.Context) (*DefaultClient, error) {
+	c := &DefaultClient{}
 	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
 		return nil, err
@@ -29,7 +33,7 @@ func NewClient(ctx context.Context) (*Client, error) {
 	return c, nil
 }
 
-func (c *Client) Upload(ctx context.Context, key string, body io.Reader) error {
+func (c *DefaultClient) Upload(ctx context.Context, key string, body io.Reader) error {
 	_, err := c.svc.PutObject(ctx, &s3.PutObjectInput{
 		Bucket:      aws.String(DefaultBucket),
 		Key:         aws.String(key),

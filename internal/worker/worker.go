@@ -12,34 +12,42 @@ import (
 	"github.com/buraksenn/expense-tracker/internal/common"
 	"github.com/buraksenn/expense-tracker/internal/store"
 	"github.com/buraksenn/expense-tracker/pkg/aws/s3"
+	"github.com/buraksenn/expense-tracker/pkg/aws/textract"
 	"github.com/buraksenn/expense-tracker/pkg/logger"
 )
 
 type Worker struct {
-	repo             *store.DefaultRepo
-	s3Client         *s3.Client
+	repo             store.Repo
+	s3Client         s3.Client
+	textractClient   textract.Client
 	incomingMessages common.IncomingMessageChan
 }
 
-func New(repo *store.DefaultRepo, s3Client *s3.Client, c common.IncomingMessageChan) *Worker {
+func New(repo store.Repo, s3Client s3.Client, textractClient textract.Client, c common.IncomingMessageChan) *Worker {
 	return &Worker{
 		repo:             repo,
 		s3Client:         s3Client,
+		textractClient:   textractClient,
 		incomingMessages: c,
 	}
 }
 
 func (w *Worker) Start() {
+	ctx := context.Background()
 	for msg := range w.incomingMessages {
 		logger.Info("Received message: %+v", msg)
 		switch GetCommandType(*msg) {
 		case common.RegisterExpenseCommandType:
-			err := w.UploadPhoto(context.Background(), msg.User, msg.Photo)
+			s3Path, err := w.UploadPhoto(ctx, msg.User, msg.Photo)
 			if err != nil {
 				logger.Error("Uploading photo: %v", err)
 				continue
 			}
 			logger.Info("Photo uploaded successfully.")
+			if err := w.AnalyzePhoto(ctx, s3Path); err != nil {
+				logger.Error("Analyzing photo: %v", err)
+				continue
+			}
 		case common.GetExpensesCommandType:
 			logger.Info("GetExpensesCommandType not implemented yet.")
 		}
@@ -65,13 +73,13 @@ func (w *Worker) RegisterExpense(ctx context.Context, cmd common.RegisterExpense
 	if err != nil {
 		return fmt.Errorf("putting expense: %w", err)
 	}
-	return w.UploadPhoto(ctx, cmd.ID, cmd.Photo)
+	return nil
 }
 
-func (w *Worker) UploadPhoto(ctx context.Context, id, link string) error {
+func (w *Worker) UploadPhoto(ctx context.Context, id, link string) (string, error) {
 	u, err := url.Parse(link)
 	if err != nil {
-		return fmt.Errorf("parsing url: %w", err)
+		return "", fmt.Errorf("parsing url: %w", err)
 	}
 
 	httpClient := &http.Client{
@@ -82,19 +90,35 @@ func (w *Worker) UploadPhoto(ctx context.Context, id, link string) error {
 		URL:    u,
 	})
 	if err != nil {
-		return fmt.Errorf("downloading file: %w", err)
+		return "", fmt.Errorf("downloading file: %w", err)
 	}
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("downloading file: status code %d", resp.StatusCode)
+		return "", fmt.Errorf("downloading file: status code %d", resp.StatusCode)
 	}
 
 	defer resp.Body.Close()
 	b, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("reading response body: %w", err)
+		return "", fmt.Errorf("reading response body: %w", err)
 	}
 
-	return w.s3Client.Upload(ctx, fmt.Sprintf("%s/%s.jpeg", id, time.Now().Format("2006/01/02T15_04_05Z07_00")), bytes.NewReader(b))
+	s3Path := fmt.Sprintf("%s/%s.jpeg", id, time.Now().Format("2006/01/02T15_04_05Z07_00"))
+	return s3Path, w.s3Client.Upload(ctx, s3Path, bytes.NewReader(b))
+}
+
+func (w *Worker) AnalyzePhoto(ctx context.Context, s3Path string) error {
+	out, err := w.textractClient.AnalyzeDocument(ctx, s3Path)
+	if err != nil {
+		return fmt.Errorf("analyzing document: %w", err)
+	}
+	logger.Info("Analyzed document: %+v", out)
+	for _, block := range out.Blocks {
+		if block.Text != nil {
+			logger.Info("Found text: %s", *block.Text)
+		}
+	}
+
+	return nil
 }
 
 func GetCommandType(msg common.IncomingMessage) common.CommandType {

@@ -110,6 +110,11 @@ github.com/aws/aws-sdk-go-v2/service/ssooidc/types
 github.com/aws/aws-sdk-go-v2/service/sts
 github.com/aws/aws-sdk-go-v2/service/sts/internal/endpoints
 github.com/aws/aws-sdk-go-v2/service/sts/types
+# github.com/aws/aws-sdk-go-v2/service/textract v1.22.2
+## explicit; go 1.15
+github.com/aws/aws-sdk-go-v2/service/textract
+github.com/aws/aws-sdk-go-v2/service/textract/internal/endpoints
+github.com/aws/aws-sdk-go-v2/service/textract/types
 # github.com/aws/smithy-go v1.14.1
 ## explicit; go 1.15
 github.com/aws/smithy-go
