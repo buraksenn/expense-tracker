@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	DefaultBucket = "receipts"
+	DefaultBucket = "expensetracker-receipts"
 )
 
 type Client struct {
@@ -31,9 +31,10 @@ func NewClient(ctx context.Context) (*Client, error) {
 
 func (c *Client) Upload(ctx context.Context, key string, body io.Reader) error {
 	_, err := c.svc.PutObject(ctx, &s3.PutObjectInput{
-		Bucket: aws.String(DefaultBucket),
-		Key:    aws.String(key),
-		Body:   body,
+		Bucket:      aws.String(DefaultBucket),
+		Key:         aws.String(key),
+		ContentType: aws.String("image/jpeg"),
+		Body:        body,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to upload s3 object with bucket: %s, key: %s, err: %v", DefaultBucket, key, err)

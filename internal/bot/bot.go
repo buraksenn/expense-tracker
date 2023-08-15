@@ -1,6 +1,8 @@
 package bot
 
 import (
+	"fmt"
+
 	"github.com/buraksenn/expense-tracker/internal/common"
 	"github.com/buraksenn/expense-tracker/pkg/logger"
 	"github.com/buraksenn/expense-tracker/pkg/telegram"
@@ -35,13 +37,17 @@ func (b *Bot) Start() {
 
 func (b *Bot) handleUpdate(update *tgbotapi.Update) {
 	msg := &common.IncomingMessage{
-		ChatID: update.Message.Chat.ID,
-		Text:   update.Message.Text,
-		User:   update.Message.From.ID,
+		User: fmt.Sprint(update.Message.From.ID),
+		Text: update.Message.Text,
 	}
 
 	if len(update.Message.Photo) > 0 {
-		msg.Photo = update.Message.Photo[0].FileID
+		fileID := update.Message.Photo[len(update.Message.Photo)-1].FileID
+		link, err := b.TelegramClient.GetFileLink(fileID)
+		if err != nil {
+			logger.Error("Getting file link for msg: %+v, err: %+v", msg, err)
+		}
+		msg.Photo = link
 	}
 
 	b.MessageChan <- msg

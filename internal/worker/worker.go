@@ -1,4 +1,4 @@
-package expense
+package worker
 
 import (
 	"bytes"
@@ -12,17 +12,37 @@ import (
 	"github.com/buraksenn/expense-tracker/internal/common"
 	"github.com/buraksenn/expense-tracker/internal/store"
 	"github.com/buraksenn/expense-tracker/pkg/aws/s3"
+	"github.com/buraksenn/expense-tracker/pkg/logger"
 )
 
 type Worker struct {
-	repo     *store.DefaultRepo
-	s3Client *s3.Client
+	repo             *store.DefaultRepo
+	s3Client         *s3.Client
+	incomingMessages common.IncomingMessageChan
 }
 
-func New(repo *store.DefaultRepo, s3Client *s3.Client) *Worker {
+func New(repo *store.DefaultRepo, s3Client *s3.Client, c common.IncomingMessageChan) *Worker {
 	return &Worker{
-		repo:     repo,
-		s3Client: s3Client,
+		repo:             repo,
+		s3Client:         s3Client,
+		incomingMessages: c,
+	}
+}
+
+func (w *Worker) Start() {
+	for msg := range w.incomingMessages {
+		logger.Info("Received message: %+v", msg)
+		switch GetCommandType(*msg) {
+		case common.RegisterExpenseCommandType:
+			err := w.UploadPhoto(context.Background(), msg.User, msg.Photo)
+			if err != nil {
+				logger.Error("Uploading photo: %v", err)
+				continue
+			}
+			logger.Info("Photo uploaded successfully.")
+		case common.GetExpensesCommandType:
+			logger.Info("GetExpensesCommandType not implemented yet.")
+		}
 	}
 }
 
@@ -74,5 +94,12 @@ func (w *Worker) UploadPhoto(ctx context.Context, id, link string) error {
 		return fmt.Errorf("reading response body: %w", err)
 	}
 
-	return w.s3Client.Upload(ctx, fmt.Sprintf("%s/%s", id, time.Now().Format("2006/01/02T15_04_05Z07_00")), bytes.NewReader(b))
+	return w.s3Client.Upload(ctx, fmt.Sprintf("%s/%s.jpeg", id, time.Now().Format("2006/01/02T15_04_05Z07_00")), bytes.NewReader(b))
+}
+
+func GetCommandType(msg common.IncomingMessage) common.CommandType {
+	if msg.Photo != "" {
+		return common.RegisterExpenseCommandType
+	}
+	return common.GetExpensesCommandType
 }

@@ -2,6 +2,13 @@ package common
 
 import "time"
 
+type CommandType string
+
+const (
+	GetExpensesCommandType     CommandType = "GetExpensesCommand"
+	RegisterExpenseCommandType CommandType = "RegisterExpenseCommand"
+)
+
 type GetExpensesCommand struct {
 	ID        string
 	StartDate time.Time

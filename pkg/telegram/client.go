@@ -23,6 +23,7 @@ func New(token string) (*DefaultClient, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return &DefaultClient{bot: bot}, nil
 }
 
@@ -45,8 +46,11 @@ func (cl *DefaultClient) sendMessageInternal(chatID int64, text string, repliedM
 	return err
 }
 
-func (cl *DefaultClient) GetFileLink(fileID string) (string, error) {
-	fileConfig := tgbotapi.FileConfig{FileID: fileID}
+func (cl *DefaultClient) GetFileLink(id string) (string, error) {
+	fileConfig := tgbotapi.FileConfig{
+		FileID: id,
+	}
+
 	file, err := cl.bot.GetFile(fileConfig)
 	if err != nil {
 		return "", fmt.Errorf("getting file: %w", err)
