@@ -20,3 +20,10 @@ type RegisterExpenseCommand struct {
 	Tax    int
 	Photo  string
 }
+
+func GetCommandType(msg IncomingMessage) CommandType {
+	if msg.Photo != "" {
+		return RegisterExpenseCommandType
+	}
+	return GetExpensesCommandType
+}

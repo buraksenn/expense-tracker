@@ -2,6 +2,7 @@ package textract
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -10,8 +11,18 @@ import (
 	"github.com/buraksenn/expense-tracker/pkg/aws/s3"
 )
 
+const (
+	TAX_QUERY   = "What is the value in the same line of TOPKDV?"
+	TOTAL_QUERY = "What is the value in the same line of TOPLAM?"
+)
+
+type AnalyzedExpense struct {
+	Tax   string `json:"tax"`
+	Total string `json:"total"`
+}
+
 type Client interface {
-	AnalyzeDocument(ctx context.Context, path string) (*textract.AnalyzeDocumentOutput, error)
+	QueryDocument(ctx context.Context, path string) (*AnalyzedExpense, error)
 }
 
 type DefaultClient struct {
@@ -29,7 +40,7 @@ func NewDefaultClient(ctx context.Context) (*DefaultClient, error) {
 	}, nil
 }
 
-func (c *DefaultClient) AnalyzeDocument(ctx context.Context, path string) (*textract.AnalyzeDocumentOutput, error) {
+func (c *DefaultClient) QueryDocument(ctx context.Context, path string) (*AnalyzedExpense, error) {
 	inp := &textract.AnalyzeDocumentInput{
 		Document: &types.Document{
 			S3Object: &types.S3Object{
@@ -37,14 +48,18 @@ func (c *DefaultClient) AnalyzeDocument(ctx context.Context, path string) (*text
 				Name:   aws.String(path),
 			},
 		},
-		FeatureTypes: []types.FeatureType{types.FeatureTypeQueries},
+		FeatureTypes: []types.FeatureType{
+			types.FeatureTypeQueries,
+		},
 		QueriesConfig: &types.QueriesConfig{
 			Queries: []types.Query{
 				{
-					Text: aws.String("What is TOPKDV"),
+					Text:  aws.String(TAX_QUERY),
+					Alias: aws.String("Q_TOPKDV"),
 				},
 				{
-					Text: aws.String("What is TOPLAM"),
+					Text:  aws.String(TOTAL_QUERY),
+					Alias: aws.String("Q_TOPLAM"),
 				},
 			},
 		},
@@ -54,6 +69,41 @@ func (c *DefaultClient) AnalyzeDocument(ctx context.Context, path string) (*text
 	if err != nil {
 		return nil, err
 	}
+	if out == nil {
+		return nil, fmt.Errorf("output is nil")
+	}
 
-	return out, nil
+	queryAndAnswerBlocks := map[string]types.Block{}
+	for _, block := range out.Blocks {
+		if block.BlockType == types.BlockTypeQuery || block.BlockType == types.BlockTypeQueryResult {
+			queryAndAnswerBlocks[*block.Id] = block
+		}
+	}
+
+	queryAndAnswers := map[string]string{}
+	for _, q := range queryAndAnswerBlocks {
+		if q.BlockType != types.BlockTypeQuery {
+			continue
+		}
+		if len(q.Relationships) != 1 {
+			return nil, fmt.Errorf("query block has more than one relationship")
+		}
+		rel := q.Relationships[0]
+		if rel.Type == types.RelationshipTypeAnswer {
+			if len(rel.Ids) != 1 {
+				return nil, fmt.Errorf("query block has more than one answer")
+			}
+			id := rel.Ids[0]
+			answer, ok := queryAndAnswerBlocks[id]
+			if !ok {
+				return nil, fmt.Errorf("answer block not found")
+			}
+			queryAndAnswers[*q.Query.Text] = *answer.Text
+		}
+	}
+
+	return &AnalyzedExpense{
+		Tax:   queryAndAnswers[TAX_QUERY],
+		Total: queryAndAnswers[TOTAL_QUERY],
+	}, nil
 }

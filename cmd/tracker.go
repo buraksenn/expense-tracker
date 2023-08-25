@@ -44,8 +44,9 @@ func main() {
 	if err != nil {
 		logger.Fatal("Failed to create telegram client, err: %v", err)
 	}
-	messageChan := make(common.IncomingMessageChan)
-	telegramBot := bot.New(telegramClient, messageChan)
+	incomingMessageChan := make(common.IncomingMessageChan)
+	outGoingMessageChan := make(common.OutgoingMessageChan)
+	telegramBot := bot.New(telegramClient, incomingMessageChan, outGoingMessageChan)
 
 	ctx := context.Background()
 	dynamoClient, err := dynamo.NewClient(ctx)
@@ -62,7 +63,7 @@ func main() {
 		logger.Fatal("Failed to create textract client, err: %v", err)
 	}
 
-	worker := worker.New(repo, s3Client, textractClient, messageChan)
+	worker := worker.New(repo, s3Client, textractClient, incomingMessageChan, outGoingMessageChan)
 	go telegramBot.Start()
 	go worker.Start()
 
