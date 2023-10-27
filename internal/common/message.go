@@ -6,7 +6,6 @@ type IncomingMessage struct {
 	Text   string
 	Photo  string
 }
-type IncomingMessageChan chan *IncomingMessage
 
 type OutgoingMessage struct {
 	ChatID int64

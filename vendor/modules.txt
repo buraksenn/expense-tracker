@@ -1,4 +1,10 @@
-# github.com/aws/aws-sdk-go-v2 v1.20.1
+# github.com/aws/aws-lambda-go v1.41.0
+## explicit; go 1.18
+github.com/aws/aws-lambda-go/lambda
+github.com/aws/aws-lambda-go/lambda/handlertrace
+github.com/aws/aws-lambda-go/lambda/messages
+github.com/aws/aws-lambda-go/lambdacontext
+# github.com/aws/aws-sdk-go-v2 v1.21.2
 ## explicit; go 1.15
 github.com/aws/aws-sdk-go-v2
 github.com/aws/aws-sdk-go-v2/aws
@@ -22,7 +28,7 @@ github.com/aws/aws-sdk-go-v2/internal/shareddefaults
 github.com/aws/aws-sdk-go-v2/internal/strings
 github.com/aws/aws-sdk-go-v2/internal/sync/singleflight
 github.com/aws/aws-sdk-go-v2/internal/timeconv
-# github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.4.10
+# github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.4.14
 ## explicit; go 1.15
 github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream
 github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream/eventstreamapi
@@ -48,10 +54,10 @@ github.com/aws/aws-sdk-go-v2/feature/dynamodb/expression
 ## explicit; go 1.15
 github.com/aws/aws-sdk-go-v2/feature/ec2/imds
 github.com/aws/aws-sdk-go-v2/feature/ec2/imds/internal/config
-# github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.38
+# github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.43
 ## explicit; go 1.15
 github.com/aws/aws-sdk-go-v2/internal/configsources
-# github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.4.32
+# github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.4.37
 ## explicit; go 1.15
 github.com/aws/aws-sdk-go-v2/internal/endpoints/v2
 # github.com/aws/aws-sdk-go-v2/internal/ini v1.3.35
@@ -115,7 +121,7 @@ github.com/aws/aws-sdk-go-v2/service/sts/types
 github.com/aws/aws-sdk-go-v2/service/textract
 github.com/aws/aws-sdk-go-v2/service/textract/internal/endpoints
 github.com/aws/aws-sdk-go-v2/service/textract/types
-# github.com/aws/smithy-go v1.14.1
+# github.com/aws/smithy-go v1.15.0
 ## explicit; go 1.15
 github.com/aws/smithy-go
 github.com/aws/smithy-go/auth/bearer

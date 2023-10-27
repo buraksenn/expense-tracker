@@ -11,13 +11,9 @@ var (
 	zlogger *zap.SugaredLogger
 )
 
-func Init(f *os.File) {
+func init() {
 	cores := []zapcore.Core{
-		zapcore.NewCore(zapcore.NewConsoleEncoder(zap.NewDevelopmentEncoderConfig()), zapcore.AddSync(f), zapcore.DebugLevel),
-	}
-
-	if f != os.Stdout {
-		cores = append(cores, zapcore.NewCore(zapcore.NewConsoleEncoder(zap.NewDevelopmentEncoderConfig()), zapcore.AddSync(f), zapcore.InfoLevel))
+		zapcore.NewCore(zapcore.NewConsoleEncoder(zap.NewDevelopmentEncoderConfig()), zapcore.Lock(os.Stdout), zapcore.DebugLevel),
 	}
 
 	core := zapcore.NewTee(cores...)
@@ -43,8 +39,4 @@ func Error(format string, v ...interface{}) {
 
 func Fatal(format string, v ...interface{}) {
 	zlogger.Fatalf(format, v...)
-}
-
-func Panic(format string, v ...interface{}) {
-	zlogger.Panicf(format, v...)
 }

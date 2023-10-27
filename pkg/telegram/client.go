@@ -6,14 +6,6 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-type Client interface {
-	GetUpdatesChan() (tgbotapi.UpdatesChannel, error)
-	SendMessage(chatID int64, text string) error
-	SendReplyMessage(chatID int64, text string, repliedMessageID int) error
-	SendImage(chatID int64, url string) error
-	GetFileLink(fileID string) (string, error)
-}
-
 type DefaultClient struct {
 	bot *tgbotapi.BotAPI
 }
@@ -27,16 +19,8 @@ func New(token string) (*DefaultClient, error) {
 	return &DefaultClient{bot: bot}, nil
 }
 
-func (cl *DefaultClient) GetUpdatesChan() (tgbotapi.UpdatesChannel, error) {
-	return cl.bot.GetUpdatesChan(tgbotapi.NewUpdate(0)), nil
-}
-
 func (cl *DefaultClient) SendMessage(chatID int64, text string) error {
 	return cl.sendMessageInternal(chatID, text, 0)
-}
-
-func (cl *DefaultClient) SendReplyMessage(chatID int64, text string, repliedMessageID int) error {
-	return cl.sendMessageInternal(chatID, text, repliedMessageID)
 }
 
 func (cl *DefaultClient) sendMessageInternal(chatID int64, text string, repliedMessageID int) error {

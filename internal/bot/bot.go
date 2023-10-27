@@ -5,68 +5,68 @@ import (
 
 	"github.com/buraksenn/expense-tracker/internal/common"
 	"github.com/buraksenn/expense-tracker/pkg/logger"
-	"github.com/buraksenn/expense-tracker/pkg/telegram"
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
 const (
 	concurrency = 10
 )
 
-type Bot struct {
-	telegramClient      telegram.Client
-	incomingMessageChan common.IncomingMessageChan
-	outgoingMessageChan common.OutgoingMessageChan
+type telegramClient interface {
+	SendMessage(chatID int64, text string) error
+	SendImage(chatID int64, url string) error
+	GetFileLink(fileID string) (string, error)
 }
 
-func New(t telegram.Client, i common.IncomingMessageChan, o common.OutgoingMessageChan) *Bot {
+type Bot struct {
+	telegramCl telegramClient
+	inChan     common.OutgoingMessageChan
+}
+
+func New(t telegramClient, i common.OutgoingMessageChan) *Bot {
 	return &Bot{
-		telegramClient:      t,
-		incomingMessageChan: i,
-		outgoingMessageChan: o,
+		telegramCl: t,
+		inChan:     i,
 	}
 }
 
 func (b *Bot) Start() {
-	go b.handleIncoming()
 	go b.handleOutgoing()
-
 }
 
-func (b *Bot) handleIncoming() {
-	ch, err := b.telegramClient.GetUpdatesChan()
-	if err != nil {
-		logger.Fatal("Getting updates channel", err)
+func (b *Bot) Stop() {
+	logger.Debug("Stopping telegram bot...")
+	close(b.inChan)
+}
+
+func (b *Bot) PrepareMessage(update *tgbotapi.Update) (*common.IncomingMessage, error) {
+	if update == nil || update.Message == nil {
+		return nil, fmt.Errorf("update or message is nil")
 	}
 
-	for update := range ch {
-		if update.Message != nil {
-			msg := &common.IncomingMessage{
-				ChatID: update.Message.Chat.ID,
-				User:   fmt.Sprint(update.Message.From.ID),
-				Text:   update.Message.Text,
-			}
+	msg := &common.IncomingMessage{
+		ChatID: update.Message.Chat.ID,
+		User:   fmt.Sprint(update.Message.From.ID),
+		Text:   update.Message.Text,
+	}
 
-			if len(update.Message.Photo) > 0 {
-				fileID := update.Message.Photo[len(update.Message.Photo)-1].FileID
-				link, err := b.telegramClient.GetFileLink(fileID)
-				if err != nil {
-					// TODO handle error properly
-					logger.Error("Getting file link for msg: %+v, err: %+v", msg, err)
-				}
-				msg.Photo = link
-			}
-
-			b.incomingMessageChan <- msg
+	if len(update.Message.Photo) > 0 {
+		fileID := update.Message.Photo[len(update.Message.Photo)-1].FileID
+		link, err := b.telegramCl.GetFileLink(fileID)
+		if err != nil {
+			return nil, fmt.Errorf("getting file link: %w", err)
 		}
+		msg.Photo = link
 	}
+
+	return msg, nil
 }
 
 func (b *Bot) handleOutgoing() {
-	for msg := range b.outgoingMessageChan {
-		if err := b.telegramClient.SendMessage(msg.ChatID, msg.Text); err != nil {
-			// TODO handle error properly
+	for msg := range b.inChan {
+		if err := b.telegramCl.SendMessage(msg.ChatID, msg.Text); err != nil {
 			logger.Error("Sending message to chat: %d, err: %v", msg.ChatID, err)
 		}
 	}
-
+	logger.Debug("Outgoing message channel closed")
 }
