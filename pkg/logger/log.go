@@ -18,7 +18,7 @@ func init() {
 
 	core := zapcore.NewTee(cores...)
 	l := zap.New(core)
-	zlogger = l.Sugar()
+	zlogger = l.Sugar().WithOptions(zap.AddCallerSkip(1))
 }
 
 func Debug(format string, v ...interface{}) {

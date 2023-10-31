@@ -4,3 +4,4 @@ debug.test
 .DS_Store
 .env
 .envrc
+bin/

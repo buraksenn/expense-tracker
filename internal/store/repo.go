@@ -19,7 +19,7 @@ var (
 
 type Repo interface {
 	Put(ctx context.Context, expense *common.Expense) error
-	GetAllByID(ctx context.Context, chatID string) ([]*common.Expense, error)
+	GetAllByID(ctx context.Context, chatID string) ([]common.Expense, error)
 }
 
 type DefaultRepo struct {
@@ -44,7 +44,7 @@ func (r *DefaultRepo) Put(ctx context.Context, expense *common.Expense) error {
 	})
 }
 
-func (r *DefaultRepo) GetAllByID(ctx context.Context, chatID string) ([]*common.Expense, error) {
+func (r *DefaultRepo) GetAllByID(ctx context.Context, chatID string) ([]common.Expense, error) {
 	keyEx := expression.Key("id").Equal(expression.Value(chatID))
 	expr, err := expression.NewBuilder().WithKeyCondition(keyEx).Build()
 	if err != nil {
@@ -62,8 +62,8 @@ func (r *DefaultRepo) GetAllByID(ctx context.Context, chatID string) ([]*common.
 		return nil, fmt.Errorf("failed to query dynamodb, err: %v", err)
 	}
 
-	var e []*common.Expense
-	if err := attributevalue.UnmarshalListOfMaps(out.Items, e); err != nil {
+	var e []common.Expense
+	if err := attributevalue.UnmarshalListOfMaps(out.Items, &e); err != nil {
 		return nil, fmt.Errorf("failed to unmarshall expenses, err: %v", err)
 	}
 

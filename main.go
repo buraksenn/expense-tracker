@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
-	"github.com/aws/aws-lambda-go/lambda/messages"
 	"github.com/buraksenn/expense-tracker/config"
 	"github.com/buraksenn/expense-tracker/internal/bot"
 	"github.com/buraksenn/expense-tracker/internal/common"
@@ -15,6 +15,7 @@ import (
 	"github.com/buraksenn/expense-tracker/pkg/aws/s3"
 	"github.com/buraksenn/expense-tracker/pkg/aws/textract"
 	"github.com/buraksenn/expense-tracker/pkg/logger"
+
 	"github.com/buraksenn/expense-tracker/pkg/telegram"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
@@ -40,7 +41,7 @@ func init() {
 		logger.Fatal("Failed to create telegram client, err: %v", err)
 	}
 	outGoingMessageChan := make(common.OutgoingMessageChan)
-
+	doneChan := make(chan struct{})
 	ctx := context.Background()
 	dynamoClient, err := dynamo.NewClient(ctx)
 	if err != nil {
@@ -56,7 +57,7 @@ func init() {
 		logger.Fatal("Failed to create textract client, err: %v", err)
 	}
 
-	telegramBot = bot.New(telegramClient, outGoingMessageChan)
+	telegramBot = bot.New(telegramClient, outGoingMessageChan, doneChan)
 	worker = pkgWorker.New(repo, s3Client, textractClient, outGoingMessageChan)
 }
 
@@ -64,29 +65,32 @@ func main() {
 	lambda.Start(handler)
 }
 
-func handler(ctx context.Context, req messages.InvokeRequest) {
+func handler(ctx context.Context, request events.APIGatewayProxyRequest) {
 	logger.Debug("Starting handler")
 
-	msg, err := parseInvokeRequest(req)
+	msg, err := parseRequestBody(request)
 	if err != nil {
 		logger.Error("Failed to parse invoke request, err: %v", err)
 		return
 	}
 
+	telegramBot.Start()
 	if err := worker.HandleCommand(ctx, msg); err != nil {
 		logger.Error("Failed to handle command, err: %v", err)
 		return
 	}
 	telegramBot.Stop()
+	<-telegramBot.DoneChan
 
 	logger.Info("Handler finished")
 }
 
-func parseInvokeRequest(req messages.InvokeRequest) (*common.IncomingMessage, error) {
-	logger.Debug("Parsing invoke request: %v", req)
+func parseRequestBody(req events.APIGatewayProxyRequest) (*common.IncomingMessage, error) {
+	logger.Debug("Parsing request body")
+
 	var update tgbotapi.Update
-	if err := json.Unmarshal(req.Payload, &update); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal payload, err: %v", err)
+	if err := json.Unmarshal([]byte(req.Body), &update); err != nil {
+		return nil, fmt.Errorf("unmarshalling request body: %w", err)
 	}
 
 	return telegramBot.PrepareMessage(&update)

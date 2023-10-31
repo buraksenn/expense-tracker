@@ -8,10 +8,6 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-const (
-	concurrency = 10
-)
-
 type telegramClient interface {
 	SendMessage(chatID int64, text string) error
 	SendImage(chatID int64, url string) error
@@ -21,12 +17,14 @@ type telegramClient interface {
 type Bot struct {
 	telegramCl telegramClient
 	inChan     common.OutgoingMessageChan
+	DoneChan   chan struct{}
 }
 
-func New(t telegramClient, i common.OutgoingMessageChan) *Bot {
+func New(t telegramClient, i common.OutgoingMessageChan, doneC chan struct{}) *Bot {
 	return &Bot{
 		telegramCl: t,
 		inChan:     i,
+		DoneChan:   doneC,
 	}
 }
 
@@ -64,9 +62,11 @@ func (b *Bot) PrepareMessage(update *tgbotapi.Update) (*common.IncomingMessage, 
 
 func (b *Bot) handleOutgoing() {
 	for msg := range b.inChan {
+		logger.Debug("Sending message to chat: %d, text: %s", msg.ChatID, msg.Text)
 		if err := b.telegramCl.SendMessage(msg.ChatID, msg.Text); err != nil {
 			logger.Error("Sending message to chat: %d, err: %v", msg.ChatID, err)
 		}
 	}
 	logger.Debug("Outgoing message channel closed")
+	b.DoneChan <- struct{}{}
 }
