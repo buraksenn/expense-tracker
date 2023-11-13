@@ -38,9 +38,15 @@ func (w *Worker) handleRegisterExpenseCommand(ctx context.Context, msg *common.I
 		Tax:       *tax,
 		CreatedAt: time.Now().UTC().Unix(),
 	}
+	logger.DebugC(ctx, "ID: %s, Amount: %f, Tax: %f, CreatedAt: %d", expense.ID, expense.Amount, expense.Tax, expense.CreatedAt)
 
 	if err := w.registerExpense(ctx, expense); err != nil {
 		return fmt.Errorf("registering expense: %w", err)
+	}
+
+	w.outgoingMessageChan <- &common.OutgoingMessage{
+		ChatID: msg.ChatID,
+		Text:   fmt.Sprintf("Expense registered successfully. Expense: %+v", expense),
 	}
 
 	logger.DebugC(ctx, "Expense registered successfully. Expense: %+v", expense)
@@ -86,7 +92,7 @@ func (w *Worker) uploadPhoto(ctx context.Context, id, link string) (string, erro
 }
 
 func (w *Worker) analyzePhoto(ctx context.Context, s3Path string) (*float64, *float64, error) {
-	exp, err := w.textractClient.QueryDocument(ctx, s3Path)
+	exp, err := w.textractClient.AnalyzeExpense(ctx, s3Path)
 	if err != nil {
 		return nil, nil, fmt.Errorf("analyzing document: %w", err)
 	}

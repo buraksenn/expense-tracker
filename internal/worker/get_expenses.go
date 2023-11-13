@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/buraksenn/expense-tracker/internal/common"
 	"github.com/buraksenn/expense-tracker/pkg/logger"
@@ -31,7 +32,9 @@ func (w *Worker) handleGetExpensesCommand(ctx context.Context, msg *common.Incom
 	for _, e := range expenses {
 		totalExpense += e.Amount
 		totalTax += e.Tax
-		s.WriteString(fmt.Sprintf("Amount: %f, Tax: %f, CreatedAt: %d\n", e.Amount, e.Tax, e.CreatedAt))
+
+		date := time.Unix(e.CreatedAt, 0).Format(time.RFC3339)
+		s.WriteString(fmt.Sprintf("Amount: %.2f, Tax: %.2f, CreatedAt: %s\n", e.Amount, e.Tax, date))
 	}
 	s.WriteString(fmt.Sprintf("Total Expense: %f, Total Tax: %f", totalExpense, totalTax))
 

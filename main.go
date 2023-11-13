@@ -65,24 +65,25 @@ func main() {
 	lambda.Start(handler)
 }
 
-func handler(ctx context.Context, request events.APIGatewayProxyRequest) {
+func handler(ctx context.Context, request events.APIGatewayProxyRequest) (int, error) {
 	logger.Debug("Starting handler")
 
 	msg, err := parseRequestBody(request)
 	if err != nil {
 		logger.Error("Failed to parse invoke request, err: %v", err)
-		return
+		return 200, nil
 	}
 
 	telegramBot.Start()
 	if err := worker.HandleCommand(ctx, msg); err != nil {
 		logger.Error("Failed to handle command, err: %v", err)
-		return
+		return 200, nil
 	}
 	telegramBot.Stop()
 	<-telegramBot.DoneChan
 
 	logger.Info("Handler finished")
+	return 200, nil
 }
 
 func parseRequestBody(req events.APIGatewayProxyRequest) (*common.IncomingMessage, error) {

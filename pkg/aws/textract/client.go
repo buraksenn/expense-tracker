@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/textract"
 	"github.com/aws/aws-sdk-go-v2/service/textract/types"
 	"github.com/buraksenn/expense-tracker/pkg/aws/s3"
+	"github.com/buraksenn/expense-tracker/pkg/logger"
 )
 
 const (
@@ -23,6 +24,7 @@ type AnalyzedExpense struct {
 
 type Client interface {
 	QueryDocument(ctx context.Context, path string) (*AnalyzedExpense, error)
+	AnalyzeExpense(ctx context.Context, path string) (*AnalyzedExpense, error)
 }
 
 type DefaultClient struct {
@@ -40,6 +42,51 @@ func NewDefaultClient(ctx context.Context) (*DefaultClient, error) {
 	}, nil
 }
 
+func (c *DefaultClient) AnalyzeExpense(ctx context.Context, path string) (*AnalyzedExpense, error) {
+	inp := &textract.AnalyzeExpenseInput{
+		Document: &types.Document{
+			S3Object: &types.S3Object{
+				Bucket: aws.String(s3.DefaultBucket),
+				Name:   aws.String(path),
+			},
+		},
+	}
+
+	out, err := c.cl.AnalyzeExpense(ctx, inp)
+	if err != nil {
+		return nil, err
+	}
+	if out == nil {
+		return nil, fmt.Errorf("output is nil")
+	}
+	tax := ""
+	total := ""
+	subTotal := ""
+	for _, s := range out.ExpenseDocuments[0].SummaryFields {
+		if *s.Type.Text == "TAX" {
+			tax = *s.ValueDetection.Text
+		}
+		if *s.Type.Text == "TOTAL" {
+			total = *s.ValueDetection.Text
+		}
+		if *s.Type.Text == "SUBTOTAL" {
+			subTotal = *s.ValueDetection.Text
+		}
+	}
+
+	logger.DebugC(ctx, "AnalyzeExpense Tax: %s, Total: %s, SubTotal: %s", tax, total, subTotal)
+
+	if tax == "" {
+		tax = subTotal
+	}
+
+	return &AnalyzedExpense{
+		Tax:   tax,
+		Total: total,
+	}, nil
+}
+
+// Not used
 func (c *DefaultClient) QueryDocument(ctx context.Context, path string) (*AnalyzedExpense, error) {
 	inp := &textract.AnalyzeDocumentInput{
 		Document: &types.Document{
