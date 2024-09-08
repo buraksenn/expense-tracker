@@ -13,5 +13,6 @@ type IncomingMessage struct {
 type OutgoingMessage struct {
 	ChatID int64
 	Text   string
+	Images []string
 }
 type OutgoingMessageChan chan *OutgoingMessage

@@ -13,12 +13,12 @@ import (
 
 type Worker struct {
 	repo                store.Repo
-	s3Client            s3.Client
+	s3Client            *s3.Client
 	textractClient      textract.Client
 	outgoingMessageChan common.OutgoingMessageChan
 }
 
-func New(repo store.Repo, s3Client s3.Client, textractClient textract.Client, o common.OutgoingMessageChan) *Worker {
+func New(repo store.Repo, s3Client *s3.Client, textractClient textract.Client, o common.OutgoingMessageChan) *Worker {
 	return &Worker{
 		repo:                repo,
 		s3Client:            s3Client,
@@ -35,6 +35,8 @@ func (w *Worker) HandleCommand(ctx context.Context, msg *common.IncomingMessage)
 		return w.handleRegisterExpenseCommand(ctx, msg)
 	case common.GetExpensesCommandType:
 		return w.handleGetExpensesCommand(ctx, msg)
+	case common.GetReceiptsCommandType:
+		return w.handleGetReceiptsCommand(ctx, msg)
 	default:
 		return fmt.Errorf("unrecognized command type: %s", msg.Text)
 	}

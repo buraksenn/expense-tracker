@@ -5,23 +5,18 @@ import (
 
 	"github.com/buraksenn/expense-tracker/internal/common"
 	"github.com/buraksenn/expense-tracker/pkg/logger"
+	"github.com/buraksenn/expense-tracker/pkg/telegram"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-type telegramClient interface {
-	SendMessage(chatID int64, text string) error
-	SendImage(chatID int64, url string) error
-	GetFileLink(fileID string) (string, error)
-}
-
 type Bot struct {
-	telegramCl telegramClient
+	telegramCl *telegram.Client
 	inChan     common.OutgoingMessageChan
 	DoneChan   chan struct{}
 }
 
-func New(t telegramClient, i common.OutgoingMessageChan, doneC chan struct{}) *Bot {
+func New(t *telegram.Client, i common.OutgoingMessageChan, doneC chan struct{}) *Bot {
 	return &Bot{
 		telegramCl: t,
 		inChan:     i,
@@ -64,6 +59,12 @@ func (b *Bot) PrepareMessage(update *tgbotapi.Update) (*common.IncomingMessage, 
 
 func (b *Bot) handleOutgoing() {
 	for msg := range b.inChan {
+		if len(msg.Images) > 0 {
+			if err := b.telegramCl.BatchSendImage(msg.ChatID, msg.Images); err != nil {
+				logger.Error("Sending images to chat: %d, err: %v", msg.ChatID, err)
+			}
+		}
+
 		logger.Debug("Sending message to chat: %d, text: %s", msg.ChatID, msg.Text)
 		if err := b.telegramCl.SendMessage(msg.ChatID, msg.Text); err != nil {
 			logger.Error("Sending message to chat: %d, err: %v", msg.ChatID, err)
