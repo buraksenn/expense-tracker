@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/buraksenn/expense-tracker/internal/common"
 	"github.com/buraksenn/expense-tracker/pkg/aws/dynamo"
@@ -20,6 +21,7 @@ var (
 type Repo interface {
 	Put(ctx context.Context, expense *common.Expense) error
 	GetAllByID(ctx context.Context, chatID string) ([]common.Expense, error)
+	GetMonthExpenses(ctx context.Context, chatID string, date time.Time) ([]common.Expense, error)
 }
 
 type DefaultRepo struct {
@@ -51,6 +53,23 @@ func (r *DefaultRepo) GetAllByID(ctx context.Context, chatID string) ([]common.E
 		return nil, fmt.Errorf("failed to build expression, err: %v", err)
 	}
 
+	return r.queryExpenses(ctx, expr)
+}
+
+func (r *DefaultRepo) GetMonthExpenses(ctx context.Context, chatID string, date time.Time) ([]common.Expense, error) {
+	oneMonthPrior := date.AddDate(0, -1, 0)
+
+	keyEx := expression.Key("id").Equal(expression.Value(chatID))
+	sortKeyEx := expression.Key("created_at").Between(expression.Value(date.UnixMilli()), expression.Value(oneMonthPrior.UnixMilli()))
+	expr, err := expression.NewBuilder().WithKeyCondition(keyEx.And(sortKeyEx)).Build()
+	if err != nil {
+		return nil, fmt.Errorf("failed to build expression, err: %v", err)
+	}
+
+	return r.queryExpenses(ctx, expr)
+}
+
+func (r *DefaultRepo) queryExpenses(ctx context.Context, expr expression.Expression) ([]common.Expense, error) {
 	out, err := r.c.GetItems(ctx, &dynamodb.QueryInput{
 		TableName:                 TableName,
 		ExpressionAttributeNames:  expr.Names(),

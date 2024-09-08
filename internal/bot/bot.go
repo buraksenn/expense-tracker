@@ -5,6 +5,7 @@ import (
 
 	"github.com/buraksenn/expense-tracker/internal/common"
 	"github.com/buraksenn/expense-tracker/pkg/logger"
+
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
@@ -43,6 +44,7 @@ func (b *Bot) PrepareMessage(update *tgbotapi.Update) (*common.IncomingMessage, 
 	}
 
 	msg := &common.IncomingMessage{
+		Date:   update.Message.Time(),
 		ChatID: update.Message.Chat.ID,
 		User:   fmt.Sprint(update.Message.From.ID),
 		Text:   update.Message.Text,
